@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.databinding.ObservableBoolean;
 import android.databinding.ObservableField;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.view.View;
 import android.widget.Toast;
 import com.example.user.mvvmregistration.model.RegistrationResponseModel;
@@ -22,7 +24,7 @@ import rx.schedulers.Schedulers;
 
 import static com.example.user.mvvmregistration.utils.PaginationUtils.FieldUtils.toObservable;
 
-public class RegistrationViewModel {
+public class RegistrationViewModel implements Parcelable{
 
     public final ObservableField<String> email = new ObservableField<>("");
     public final ObservableField<String> password = new ObservableField<>("");
@@ -34,8 +36,12 @@ public class RegistrationViewModel {
     Subscription subscription = null;
     User user = new User("", "");
 
+    public RegistrationViewModel getInstance(){
+        return this;
+    }
+
     public RegistrationViewModel(Context context) {
-        dataManager = DataManager.INSTANCE(context);
+        dataManager = DataManager.getInstance(context);
 
         Observable<Boolean> isRegistrationEnabled = Observable.combineLatest(
                 toObservable(email),
@@ -58,6 +64,29 @@ public class RegistrationViewModel {
             }
         });
     }
+
+    protected RegistrationViewModel(Parcel in) {
+        registrationEnabled = in.readParcelable(ObservableBoolean.class.getClassLoader());
+        user = in.readParcelable(User.class.getClassLoader());
+        String email = in.readString();
+        String pass = in.readString();
+        String confirmPass = in.readString();
+        this.email.set(email);
+        this.password.set(pass);
+        this.confirmPassword.set(confirmPass);
+    }
+
+    public static final Creator<RegistrationViewModel> CREATOR = new Creator<RegistrationViewModel>() {
+        @Override
+        public RegistrationViewModel createFromParcel(Parcel in) {
+            return new RegistrationViewModel(in);
+        }
+
+        @Override
+        public RegistrationViewModel[] newArray(int size) {
+            return new RegistrationViewModel[size];
+        }
+    };
 
     public void onRegistrationClick(final View view){
         subscription = dataManager.
@@ -108,4 +137,17 @@ public class RegistrationViewModel {
         ((RegistrationActivity)context).finish();
     }
 
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeParcelable(registrationEnabled, flags);
+        dest.writeParcelable(user, flags);
+        dest.writeString(email.toString());
+        dest.writeString(password.toString());
+        dest.writeString(confirmPassword.toString());
+    }
 }

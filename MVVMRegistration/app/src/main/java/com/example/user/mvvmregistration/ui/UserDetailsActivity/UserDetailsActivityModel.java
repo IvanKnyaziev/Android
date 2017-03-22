@@ -11,7 +11,7 @@ public class UserDetailsActivityModel implements UserDetailsActivityMVP.Model {
     DataManager dataManager;
 
     public UserDetailsActivityModel(Context context){
-        this.dataManager = DataManager.INSTANCE(context);
+        this.dataManager = DataManager.getInstance(context);
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.example.user.mvvmregistration.api;
 
+import com.example.user.mvvmregistration.BuildConfig;
+
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
@@ -7,8 +9,6 @@ import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiService {
-
-    public final String BASE_URL = "https://reqres.in/api/";
 
     public OkHttpClient provideClient(){
         HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
@@ -28,7 +28,7 @@ public class ApiService {
     }
 
     public IApi provideApiService(){
-        return provideRetrofit(BASE_URL, provideClient()).create(IApi.class);
+        return provideRetrofit(BuildConfig.API_ENDPOINT, provideClient()).create(IApi.class);
     }
 
 }

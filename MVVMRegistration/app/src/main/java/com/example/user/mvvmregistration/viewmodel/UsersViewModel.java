@@ -3,10 +3,11 @@ package com.example.user.mvvmregistration.viewmodel;
 import android.content.Context;
 import android.content.Intent;
 import android.databinding.BindingAdapter;
+import android.databinding.ObservableBoolean;
 import android.databinding.ObservableField;
-import android.os.Bundle;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.support.v7.util.DiffUtil;
-import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 
@@ -14,29 +15,27 @@ import com.bumptech.glide.Glide;
 import com.example.user.mvvmregistration.adapters.UsersAdapter;
 import com.example.user.mvvmregistration.databinding.ActivityUsersBinding;
 import com.example.user.mvvmregistration.model.UserDetails.SingleUser;
+import com.example.user.mvvmregistration.model.UsersListDiffCallback;
 import com.example.user.mvvmregistration.repository.DataManager;
 import com.example.user.mvvmregistration.ui.UserDetailsActivity.UserDetailsActivity;
 import com.example.user.mvvmregistration.ui.UsersActivity;
-import com.example.user.mvvmregistration.utils.PaginationUtils.PaginationTool;
-import com.example.user.mvvmregistration.utils.PaginationUtils.PagingListener;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import rx.Observable;
 import rx.Subscriber;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
-import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 
-public class UsersViewModel {
+public class UsersViewModel implements Parcelable{
 
     public static final String USER_ID = "userID";
     public static final String USER_INFO_BUNDLE = "userInfoBundle";
 
     public final ObservableField<String> firstname = new ObservableField<>();
     public final ObservableField<String> lastname = new ObservableField<>();
+    public final ObservableBoolean isRefreshing = new ObservableBoolean(false);
 
     private DataManager dataManager;
     private SingleUser datum;
@@ -47,8 +46,12 @@ public class UsersViewModel {
     private Subscription subscription;
     private int counter = 0;
 
+    public UsersViewModel getInstance(){
+        return this;
+    }
+
     public UsersViewModel(Context context){
-        dataManager = DataManager.INSTANCE(context);
+        dataManager = DataManager.getInstance(context);
         users = new ArrayList<>();
     }
 
@@ -57,11 +60,30 @@ public class UsersViewModel {
         this.context = context;
     }
 
+    protected UsersViewModel(Parcel in) {
+        counter = in.readInt();
+        users = in.createTypedArrayList(SingleUser.CREATOR);
+    }
+
+    public static final Creator<UsersViewModel> CREATOR = new Creator<UsersViewModel>() {
+        @Override
+        public UsersViewModel createFromParcel(Parcel in) {
+            return new UsersViewModel(in);
+        }
+
+        @Override
+        public UsersViewModel[] newArray(int size) {
+            return new UsersViewModel[size];
+        }
+    };
+
     public void setAdapter(Context context, ActivityUsersBinding binding){
         this.adapter = new UsersAdapter(users, context);
         this.binding = binding;
         binding.usersList.setAdapter(adapter);
-        getUsersFromDB();
+        if(users.isEmpty()){
+            getUsersFromDB();
+        }
     }
 
     private void getUsersFromDB(){
@@ -71,25 +93,31 @@ public class UsersViewModel {
                 .subscribe(new Subscriber<List<SingleUser>>() {
                     @Override
                     public void onCompleted() {
+
                     }
                     @Override
                     public void onError(Throwable e) {
+                        e.printStackTrace();
                     }
                     @Override
                     public void onNext(List<SingleUser> singleUsers) {
+                        //Hardcoded to check that animations working fine without redraw
+                        //You can uncomment to check animations use 'l' instead of 'singleUsers'
+                        //ArrayList<SingleUser> l = new ArrayList<>();
+                        //l.add(new SingleUser(4, "eve", "holt", "https://s3.amazonaws.com/uifaces/faces/twitter/marcoramires/128.jpg"));
+                        //l.add(new SingleUser(7, "michael", "bluth", "https://s3.amazonaws.com/uifaces/faces/twitter/follettkyle/128.jpg"));
                         users.addAll(singleUsers);
                         adapter.notifyItemInserted(adapter.getItemCount() - singleUsers.size());
-                        Log.d("USERSACTIVITY", "GET DATA CALL");
-                        getData(singleUsers);
+                        getData();
                     }
                 });
     }
 
-    private void getData(List<SingleUser> singleUsers){
-        subscription = dataManager.getUsers(singleUsers)
+    private void getData(){
+        subscription = dataManager.getUsers()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Subscriber<DiffUtil.DiffResult>() {
+                .subscribe(new Subscriber<List<SingleUser>>() {
                     @Override
                     public void onCompleted() {
                     }
@@ -99,7 +127,11 @@ public class UsersViewModel {
                     }
 
                     @Override
-                    public void onNext(DiffUtil.DiffResult diffResult) {
+                    public void onNext(List<SingleUser> usersList) {
+                        UsersListDiffCallback callback = new UsersListDiffCallback(users, usersList);
+                        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(callback);
+                        users.clear();
+                        users.addAll(usersList);
                         diffResult.dispatchUpdatesTo(adapter);
                     }
                 });
@@ -131,19 +163,11 @@ public class UsersViewModel {
 //                    }
 //                    @Override
 //                    public void onNext(List<SingleUser> usersList){
-//                        users = usersList;
-//                        adapter.notifyDataSetChanged();
+//                        users.addAll(usersList);
+//                        adapter.notifyItemInserted(usersList.size());
 //                    }
 //                });
 //    }
-
-    private void updateAdapter(List<SingleUser> usersList){
-
-            for(int i = 0; i<usersList.size();i++){
-                users.set(i, usersList.get(i));
-                adapter.notifyItemChanged(i);
-            }
-    }
 
     @BindingAdapter({"image"})
     public static void loadImage(ImageView imageView, String url){
@@ -174,4 +198,14 @@ public class UsersViewModel {
         }
     }
 
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeInt(counter);
+        dest.writeTypedList(users);
+    }
 }

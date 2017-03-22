@@ -2,12 +2,9 @@ package com.example.user.mvvmregistration.repository;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.support.v7.util.DiffUtil;
-import android.util.Log;
 
 import com.example.user.mvvmregistration.api.ApiService;
-import com.example.user.mvvmregistration.api.IApi;
 import com.example.user.mvvmregistration.db.DataBaseHelper;
 import com.example.user.mvvmregistration.model.RegistrationResponseModel;
 import com.example.user.mvvmregistration.model.UserDetails.ResponseResource;
@@ -20,15 +17,12 @@ import com.example.user.mvvmregistration.model.UsersListDiffCallback;
 import com.example.user.mvvmregistration.model.UsersResponse;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 import rx.Observable;
 import rx.Single;
 import rx.Subscriber;
-import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.functions.Func2;
 import rx.functions.Func4;
@@ -47,7 +41,7 @@ public class DataManager {
         mDbHelper = new DataBaseHelper(context);
     }
 
-    public static DataManager INSTANCE(Context context) {
+    public static DataManager getInstance(Context context) {
         if  (sInstance == null) {
             synchronized (DataManager.class) {
                 if (sInstance == null) {
@@ -66,6 +60,9 @@ public class DataManager {
         return apiService.provideApiService().login(user);
     }
 
+    //Used before but in that way I can't update RecycleView without redraw
+    //because list of new data is unavailable.
+    // Can make some object with DiffResult and List but it's too much for current purpose
     public Observable<DiffUtil.DiffResult> getUsers(final List<SingleUser> oldData){
         return Observable.zip(apiService.provideApiService().getUsers(1),
                 apiService.provideApiService().getUsers(2),
@@ -102,6 +99,7 @@ public class DataManager {
                         users.addAll(usersResponse2.getData());
                         users.addAll(usersResponse3.getData());
                         users.addAll(usersResponse4.getData());
+                        updateUsersInDataBase(users);
                         return users;
                     }
                 });

@@ -17,9 +17,17 @@ android {
     }
 
     buildTypes {
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            debuggable true
+            applicationIdSuffix ".beta"
+            buildConfigField "String", "API_ENDPOINT", "\"https://reqres.in/api/\""
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            buildConfigField "String", "API_ENDPOINT", "\"https://reqres.in/api/\""
         }
     }
     productFlavors {
@@ -65,6 +73,10 @@ dependencies {
 
     //Glide async image load
     compile 'com.github.bumptech.glide:glide:3.7.0'
+
+    debugCompile 'com.squareup.leakcanary:leakcanary-android:1.5'
+    releaseCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5'
+    testCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5'
 
     //Pagination
     compile 'eu.davidea:flexible-adapter:5.0.0-rc1'
